@@ -8,6 +8,7 @@
   let supabase = null;
   let currentUser = null;
   let reminders = [];
+  let completionKeys = new Set();
   let selectedFile = null;
   let removeExistingIcon = false;
   let toastTimer = null;
@@ -84,6 +85,21 @@
     $("formTitle").textContent = "Edit reminder"; $("formEyebrow").textContent = "UPDATE REMINDER"; $("saveBtn").textContent = "Save changes";
     dialog.showModal();
   }
+  function dateInTimezone(timezone = "Asia/Kolkata") {
+    const parts = new Intl.DateTimeFormat("en-CA", {
+      timeZone: timezone || "Asia/Kolkata", year: "numeric", month: "2-digit", day: "2-digit"
+    }).formatToParts(new Date());
+    const part = (type) => parts.find(p => p.type === type)?.value;
+    return `${part("year")}-${part("month")}-${part("day")}`;
+  }
+  function completionKey(reminder, date = dateInTimezone(reminder.timezone)) {
+    return `${reminder.id}|${date}`;
+  }
+  function dateOffset(dateString, offsetDays) {
+    const date = new Date(`${dateString}T12:00:00Z`);
+    date.setUTCDate(date.getUTCDate() + offsetDays);
+    return date.toISOString().slice(0, 10);
+  }
   function render() {
     $("totalCount").textContent = reminders.length;
     $("activeCount").textContent = reminders.filter(r => r.enabled).length;
@@ -104,8 +120,10 @@
           </div>
         </div>
         <div class="schedule-line"><strong>Days:</strong> ${escapeHtml(days)}<br><strong>Times:</strong> ${escapeHtml(times)}<br><strong>Timezone:</strong> ${escapeHtml(r.timezone || "Asia/Kolkata")}</div>
+        <div class="completion-line ${completionKeys.has(completionKey(r)) ? "is-complete" : ""}">${completionKeys.has(completionKey(r)) ? "Completed today" : "Not completed today"}</div>
         ${url ? `<a class="card-link" href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(url)}</a>` : ""}
         <div class="card-actions">
+          <button type="button" class="done-btn" data-action="complete" data-id="${r.id}">${completionKeys.has(completionKey(r)) ? "Undo done" : "Done today"}</button>
           <button type="button" data-action="toggle" data-id="${r.id}">${r.enabled ? "Pause" : "Resume"}</button>
           <button type="button" data-action="edit" data-id="${r.id}">Edit</button>
           <button type="button" class="delete-btn" data-action="delete" data-id="${r.id}">Delete</button>
@@ -123,7 +141,14 @@
     $("loadStatus").textContent = "Loading…";
     const { data, error } = await supabase.from("reminders").select("*").order("created_at", { ascending: false });
     if (error) throw error;
-    reminders = data || []; render(); $("loadStatus").textContent = `${reminders.length} saved`;
+    reminders = data || [];
+    const { data: completionData, error: completionError } = await supabase
+      .from("reminder_completions")
+      .select("reminder_id, completion_date")
+      .gte("completion_date", dateOffset(dateInTimezone("UTC"), -1));
+    if (completionError) throw new Error(`Could not load completion status. Run the Phase 2 SQL migration first. ${completionError.message}`);
+    completionKeys = new Set((completionData || []).map(row => `${row.reminder_id}|${row.completion_date}`));
+    render(); $("loadStatus").textContent = `${reminders.length} saved`;
   }
   async function uploadIcon(file, reminderId) {
     if (!file) return null;
@@ -178,6 +203,30 @@
       setBusy(saveBtn, false, $("reminderId").value ? "Save changes" : "Save reminder");
       if (!$("reminderId").value) saveBtn.textContent = "Save reminder";
     }
+  }
+  async function toggleCompletion(id) {
+    const reminder = reminders.find(item => item.id === id);
+    if (!reminder) return;
+    const completionDate = dateInTimezone(reminder.timezone || "Asia/Kolkata");
+    const key = `${reminder.id}|${completionDate}`;
+    if (completionKeys.has(key)) {
+      const { error } = await supabase.from("reminder_completions")
+        .delete().eq("reminder_id", reminder.id).eq("completion_date", completionDate);
+      if (error) throw error;
+      completionKeys.delete(key);
+      render();
+      toast("Marked as not completed.");
+      return;
+    }
+    const { error } = await supabase.from("reminder_completions").upsert({
+      reminder_id: reminder.id,
+      user_id: currentUser.id,
+      completion_date: completionDate
+    }, { onConflict: "reminder_id,completion_date" });
+    if (error) throw error;
+    completionKeys.add(key);
+    render();
+    toast("Marked done for today.");
   }
   async function toggleReminder(id) {
     const r = reminders.find(item => item.id === id); if (!r) return;
@@ -259,6 +308,7 @@
     const btn = e.target.closest("button[data-action]"); if (!btn) return;
     try {
       if (btn.dataset.action === "edit") await openEdit(btn.dataset.id);
+      if (btn.dataset.action === "complete") await toggleCompletion(btn.dataset.id);
       if (btn.dataset.action === "toggle") await toggleReminder(btn.dataset.id);
       if (btn.dataset.action === "delete") await deleteReminder(btn.dataset.id);
     } catch (err) { toast(err.message || "Action failed."); }
