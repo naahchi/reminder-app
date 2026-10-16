@@ -74,3 +74,10 @@ The project uses relative paths for local assets. GitHub Pages must be served ov
 ## Next phase
 
 Add a `reminder_completions` table, a delivery/idempotency log, Cloudflare Worker Cron, and a push service. A scheduled worker must read cloud schedules and completion state before sending a push. Notification actions such as “Done Today” must update cloud completion state securely.
+
+
+## Phase 2: daily completion tracking
+
+For an existing Phase 1 database, run `supabase/phase2-migration.sql` once in Supabase SQL Editor. It adds daily completion state and a delivery log with a unique key for each reminder occurrence. It does not delete or recreate your existing reminders.
+
+Then upload the updated project files to the same GitHub repository. The dashboard adds a **Done today / Undo done** button. Completion state is stored in Supabase and remains after refresh/sign-in. The delivery log is only preparation: no real push notification is sent in Phase 2. The future server-side worker must write delivery logs using trusted server credentials; never put a service-role or private key in browser code.
