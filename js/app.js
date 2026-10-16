@@ -39,6 +39,23 @@
     if (days.length === 7) return "Every day";
     return days.slice().sort((a,b) => a-b).map(d => DAYS[d]).join(", ");
   }
+  function scheduleType() { return $("scheduleType").value || "weekly"; }
+  function updateScheduleFields() {
+    const type = scheduleType();
+    $("onceDateFields").classList.toggle("hidden", type !== "once");
+    $("rangeDateFields").classList.toggle("hidden", type !== "range");
+    $("weekdayFieldset").classList.toggle("hidden", type === "once");
+    $("specificDate").required = type === "once";
+    $("startDate").required = type === "range";
+    $("endDate").required = type === "range";
+    [...$("weekdayGrid").querySelectorAll("input")].forEach(el => { el.required = false; });
+  }
+  function scheduleDescription(r) {
+    const type = r.schedule_type || "weekly";
+    if (type === "once") return `One-time date: ${r.specific_date || "Not set"}`;
+    if (type === "range") return `Date range: ${r.start_date || "?"} to ${r.end_date || "?"} · Days: ${formatDays(r.days)}`;
+    return `Weekly: ${formatDays(r.days)}`;
+  }
   function getTimesFromForm() {
     return [...$("timesList").querySelectorAll('input[type="time"]')].map(el => el.value).filter(Boolean).sort();
   }
@@ -57,6 +74,8 @@
   }
   function resetForm() {
     reminderForm.reset(); $("reminderId").value = ""; $("timesList").innerHTML = "";
+    $("scheduleType").value = "weekly"; $("specificDate").value = ""; $("startDate").value = ""; $("endDate").value = "";
+    updateScheduleFields();
     renderTimeRow("09:00"); renderTimeRow("18:00");
     [...$("weekdayGrid").querySelectorAll('input')].forEach(el => { el.checked = Number(el.value) >= 1 && Number(el.value) <= 6; });
     $("timezoneSelect").value = "Asia/Kolkata"; $("reminderEnabled").checked = true;
@@ -72,6 +91,11 @@
     $("reminderMessage").value = r.message || ""; $("reminderUrl").value = r.url || "";
     $("reminderEnabled").checked = !!r.enabled; $("timezoneSelect").value = r.timezone || "Asia/Kolkata";
     const days = Array.isArray(r.days) ? r.days : [1,2,3,4,5,6];
+    $("scheduleType").value = r.schedule_type || "weekly";
+    $("specificDate").value = r.specific_date || "";
+    $("startDate").value = r.start_date || "";
+    $("endDate").value = r.end_date || "";
+    updateScheduleFields();
     [...$("weekdayGrid").querySelectorAll('input')].forEach(el => el.checked = days.includes(Number(el.value)));
     $("timesList").innerHTML = "";
     (Array.isArray(r.times) && r.times.length ? r.times : ["09:00"]).forEach(t => renderTimeRow(t));
@@ -109,7 +133,8 @@
     if (!reminders.length) return;
     reminders.forEach(r => {
       const card = document.createElement("article"); card.className = "reminder-card";
-      const days = formatDays(r.days), times = (r.times || []).join(" · ") || "No time set";
+      const times = (r.times || []).join(" · ") || "No time set";
+      const schedule = scheduleDescription(r);
       const url = safeUrl(r.url || "");
       card.innerHTML = `
         <div class="card-top">
@@ -119,7 +144,7 @@
             <div class="card-message">${escapeHtml(r.message || "No message added")}</div>
           </div>
         </div>
-        <div class="schedule-line"><strong>Days:</strong> ${escapeHtml(days)}<br><strong>Times:</strong> ${escapeHtml(times)}<br><strong>Timezone:</strong> ${escapeHtml(r.timezone || "Asia/Kolkata")}</div>
+        <div class="schedule-line"><strong>Schedule:</strong> ${escapeHtml(schedule)}<br><strong>Times:</strong> ${escapeHtml(times)}<br><strong>Timezone:</strong> ${escapeHtml(r.timezone || "Asia/Kolkata")}</div>
         <div class="completion-line ${completionKeys.has(completionKey(r)) ? "is-complete" : ""}">${completionKeys.has(completionKey(r)) ? "Completed today" : "Not completed today"}</div>
         ${url ? `<a class="card-link" href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(url)}</a>` : ""}
         <div class="card-actions">
@@ -175,10 +200,20 @@
       const message = $("reminderMessage").value.trim();
       const rawUrl = $("reminderUrl").value.trim();
       const url = rawUrl ? safeUrl(rawUrl) : null;
+      const type = scheduleType();
       const days = getDaysFromForm(), times = getTimesFromForm();
+      const specificDate = $("specificDate").value || null;
+      const startDate = $("startDate").value || null;
+      const endDate = $("endDate").value || null;
       if (!name) throw new Error("Please enter a reminder name.");
       if (rawUrl && !url) throw new Error("Enter a valid http:// or https:// URL.");
-      if (!days.length) throw new Error("Select at least one repeat day.");
+      if (type !== "once" && !days.length) throw new Error("Select at least one repeat day.");
+      if (type === "once" && !specificDate) throw new Error("Choose the reminder date.");
+      if (type === "range" && (!startDate || !endDate)) throw new Error("Choose both start and end dates.");
+      if (type === "range" && endDate < startDate) throw new Error("End date must be on or after the start date.");
+      const today = dateInTimezone($("timezoneSelect").value || "Asia/Kolkata");
+      if (type === "once" && specificDate < today) throw new Error("Choose today or a future date.");
+      if (type === "range" && startDate < today) throw new Error("The start date must be today or a future date.");
       if (!times.length) throw new Error("Add at least one valid notification time.");
       if (new Set(times).size !== times.length) throw new Error("Remove duplicate notification times.");
       const existing = reminders.find(r => r.id === id);
@@ -188,8 +223,12 @@
         iconPath = uploadedPath;
       }
       const payload = {
-        id, user_id: currentUser.id, name, message, url, days, times,
-        timezone: $("timezoneSelect").value, enabled: $("reminderEnabled").checked,
+        id, user_id: currentUser.id, name, message, url,
+        schedule_type: type, specific_date: type === "once" ? specificDate : null,
+        start_date: type === "range" ? startDate : null,
+        end_date: type === "range" ? endDate : null,
+        days: type === "once" ? (days.length ? days : [1,2,3,4,5,6]) : days,
+        times, timezone: $("timezoneSelect").value, enabled: $("reminderEnabled").checked,
         icon_path: iconPath, updated_at: new Date().toISOString()
       };
       const { error } = await supabase.from("reminders").upsert(payload, { onConflict: "id" });
@@ -285,6 +324,7 @@
     finally { setBusy($("signUpBtn"), false, "Create account"); }
   });
   $("logoutBtn").addEventListener("click", async () => { const {error} = await supabase.auth.signOut(); if (error) toast(error.message); else toast("Signed out."); });
+  $("scheduleType").addEventListener("change", updateScheduleFields);
   $("newReminderBtn").addEventListener("click", openCreate);
   $("emptyCreateBtn").addEventListener("click", openCreate);
   $("closeDialogBtn").addEventListener("click", () => dialog.close());

@@ -32,7 +32,7 @@
 
     <section id="appView" class="hidden">
       <div class="welcome-row">
-        <div><div class="eyebrow">YOUR WORKSPACE</div><h1>Reminders</h1><p class="muted">Manage your schedule and track what you complete each day. Push delivery is planned for a later phase.</p></div>
+        <div><div class="eyebrow">YOUR WORKSPACE</div><h1>Reminders</h1><p class="muted">Manage weekly and date-based schedules, and track what you complete each day. Push delivery is planned for a later phase.</p></div>
         <button id="newReminderBtn" class="btn btn-primary">＋ New reminder</button>
       </div>
       <div class="stats-grid">
@@ -56,10 +56,13 @@
       <div class="field-block"><span class="field-label">Custom icon (optional)</span>
         <div class="icon-upload-row"><img id="iconPreview" src="assets/default-icon.svg" alt="Reminder icon preview"><div class="upload-controls"><input id="reminderIcon" type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml"><small class="muted">PNG, JPG, WebP or SVG · max 1 MB</small><button type="button" id="removeIconBtn" class="text-btn">Use default icon</button></div></div>
       </div>
-      <fieldset><legend>Repeat on</legend><div class="weekday-grid" id="weekdayGrid">
+      <label>Schedule type<select id="scheduleType"><option value="weekly">Weekly — selected weekdays</option><option value="once">One specific date</option><option value="range">Date range</option></select></label>
+      <div id="onceDateFields" class="date-fields hidden"><label>Reminder date<input id="specificDate" type="date"></label><small class="muted">This reminder is scheduled for one date only.</small></div>
+      <div id="rangeDateFields" class="date-fields hidden"><label>Start date<input id="startDate" type="date"></label><label>End date<input id="endDate" type="date"></label><small class="muted">Within this range, the reminder runs on the selected weekdays below.</small></div>
+      <fieldset id="weekdayFieldset"><legend>Repeat on</legend><div class="weekday-grid" id="weekdayGrid">
         <label><input type="checkbox" value="1" checked> Mon</label><label><input type="checkbox" value="2" checked> Tue</label><label><input type="checkbox" value="3" checked> Wed</label><label><input type="checkbox" value="4" checked> Thu</label><label><input type="checkbox" value="5" checked> Fri</label><label><input type="checkbox" value="6" checked> Sat</label><label><input type="checkbox" value="0"> Sun</label>
       </div></fieldset>
-      <div class="field-block"><div class="time-heading"><span class="field-label">Notification times</span><button type="button" id="addTimeBtn" class="text-btn">＋ Add time</button></div><div id="timesList" class="times-list"></div><small class="muted">Times are saved in your selected timezone. This phase stores the schedule; it does not send notifications.</small></div>
+      <div class="field-block"><div class="time-heading"><span class="field-label">Notification times</span><button type="button" id="addTimeBtn" class="text-btn">＋ Add time</button></div><div id="timesList" class="times-list"></div><small class="muted">Times are saved in your selected timezone. Scheduled notifications will be enabled in a later phase.</small></div>
       <label>Timezone<select id="timezoneSelect"><option value="Asia/Kolkata">India — Asia/Kolkata</option><option value="UTC">UTC</option><option value="America/New_York">America/New_York</option><option value="Europe/London">Europe/London</option></select></label>
       <label class="toggle-row"><input id="reminderEnabled" type="checkbox" checked><span><strong>Reminder active</strong><small class="muted">Turn off to pause this reminder.</small></span></label>
       <div id="formError" class="form-error hidden" role="alert"></div>
@@ -67,6 +70,6 @@
     </form>
   </dialog>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
-  <footer><span>Reminder Desk · Phase 1</span><span>Cloud-saved · Daily completion tracking · Push delivery not enabled yet</span></footer>
+  <footer><span>Reminder Desk · Phase 3</span><span>Cloud-saved · Daily completion tracking · Push delivery not enabled yet</span></footer>
 </body>
 </html>

@@ -16,3 +16,7 @@
 .completion-line.is-complete{background:#e8f8f0;color:#19754c}
 .card-actions .done-btn{background:#edf3ff;color:#274f9c;border-color:#d8e4ff}
 .card-actions .done-btn:hover{background:#e2ebff}
+
+/* Phase 3: date-based schedule fields */
+.date-fields{display:grid;gap:12px;padding:13px;border:1px solid var(--border);border-radius:12px;background:#fbfcff}
+.date-fields small{font-size:11px}
