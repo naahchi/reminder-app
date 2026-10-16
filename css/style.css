@@ -20,3 +20,5 @@
 /* Phase 3: date-based schedule fields */
 .date-fields{display:grid;gap:12px;padding:13px;border:1px solid var(--border);border-radius:12px;background:#fbfcff}
 .date-fields small{font-size:11px}
+
+.push-panel{display:flex;align-items:center;justify-content:space-between;gap:18px;margin:0 0 22px;padding:18px 20px;border:1px solid var(--border);background:#fff;border-radius:16px}.push-panel h2{font-size:16px;margin:0 0 5px}.push-panel p{margin:0}.push-panel .button-row{margin:0;flex-wrap:wrap}.push-panel .btn{min-height:38px}@media(max-width:700px){.push-panel{align-items:flex-start;flex-direction:column;padding:16px}.push-panel .button-row{width:100%}.push-panel .button-row .btn{flex:1}}

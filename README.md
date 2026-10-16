@@ -81,3 +81,41 @@ Add a `reminder_completions` table, a delivery/idempotency log, Cloudflare Worke
 For an existing Phase 1 database, run `supabase/phase2-migration.sql` once in Supabase SQL Editor. It adds daily completion state and a delivery log with a unique key for each reminder occurrence. It does not delete or recreate your existing reminders.
 
 Then upload the updated project files to the same GitHub repository. The dashboard adds a **Done today / Undo done** button. Completion state is stored in Supabase and remains after refresh/sign-in. The delivery log is only preparation: no real push notification is sent in Phase 2. The future server-side worker must write delivery logs using trusted server credentials; never put a service-role or private key in browser code.
+
+
+## Phase 3: specific dates and date ranges
+
+This update adds three schedule types while preserving existing weekly reminders:
+
+- `weekly`: runs on selected weekdays (existing behavior).
+- `once`: runs on one selected date.
+- `range`: runs between a start and end date, on the selected weekdays.
+
+### Upgrade an existing Phase 2 deployment
+
+1. In Supabase Dashboard → SQL Editor, create a new query.
+2. Run `supabase/phase3-date-schedules.sql`. This is an additive migration; it does not delete reminders or completion records.
+3. Update the website files from this ZIP, but keep your already-configured `js/config.js` unchanged. Do not replace your real Supabase URL/key with placeholders from an archive.
+4. Test a weekly reminder, a one-time date, a date range, editing each type, and the Done Today / Undo done controls.
+
+The date schedule fields are saved in Supabase, but this phase still does not send push notifications. Actual delivery requires a later server-side scheduler and push subscription flow.
+
+
+## Phase 4A: browser notification and push subscription setup
+
+This phase registers a service worker, allows a user to grant browser notification permission, supports a local test notification, and saves a Push API subscription to Supabase. **It does not send scheduled reminders yet.** That requires a trusted server-side sender and scheduled job in Phase 4B.
+
+### Upgrade the existing Phase 3 site
+
+1. Back up your current working project files.
+2. In Supabase Dashboard → SQL Editor, run `supabase/phase4a-push-subscriptions.sql` once. This creates an additional table and per-user RLS policies.
+3. Upload the updated files to the same GitHub repository. Keep your existing working `js/config.js` Supabase URL and anon/publishable key. Add the `VAPID_PUBLIC_KEY` property shown in the archive only after a VAPID public/private key pair is generated; put **only the public key** in browser config. Never put a private VAPID key or service-role key in this repository.
+4. Open the deployed HTTPS site, sign in, click **Test on this device**, and verify the test notification appears.
+5. Once a VAPID key pair is generated and its public key is configured, click **Enable notifications** again. Confirm that a row appears in `push_subscriptions` for your signed-in user.
+
+### Important
+
+- A local test notification proves browser permission and service-worker display only; it is not a scheduled reminder.
+- Without the VAPID public key, the app can request permission and show a local test, but cannot create a new push subscription.
+- Push subscriptions contain endpoint and cryptographic subscription keys. RLS restricts table access to the signed-in owner. The future sender must run in a trusted server-side environment and keep the VAPID private key secret.
+- Browser/OS notification settings, battery restrictions, and browser support can affect delivery.
