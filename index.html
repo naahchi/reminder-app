@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f6f7fb">
+  <title>Reminder Desk</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="css/style.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script defer src="js/config.js"></script>
+  <script defer src="js/app.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><div class="brand-mark">R</div><div><strong>Reminder Desk</strong><small>Personal reminder manager</small></div></div>
+    <button id="logoutBtn" class="btn btn-quiet hidden">Sign out</button>
+  </header>
+
+  <main class="container">
+    <section id="authView" class="auth-card">
+      <div class="eyebrow">YOUR PERSONAL DASHBOARD</div>
+      <h1>Keep your reminders organized.</h1>
+      <p class="muted">Sign in to save your reminders securely to your cloud database.</p>
+      <form id="authForm" class="stack">
+        <label>Email address<input id="authEmail" type="email" autocomplete="email" required placeholder="you@example.com"></label>
+        <label>Password<input id="authPassword" type="password" autocomplete="current-password" minlength="6" required placeholder="At least 6 characters"></label>
+        <div class="button-row"><button class="btn btn-primary" type="submit" id="signInBtn">Sign in</button><button class="btn btn-outline" type="button" id="signUpBtn">Create account</button></div>
+      </form>
+      <p class="hint">If email confirmation is enabled in Supabase, confirm your email before signing in.</p>
+    </section>
+
+    <section id="appView" class="hidden">
+      <div class="welcome-row">
+        <div><div class="eyebrow">YOUR WORKSPACE</div><h1>Reminders</h1><p class="muted">Create a schedule now. Push delivery will be added in a later phase.</p></div>
+        <button id="newReminderBtn" class="btn btn-primary">＋ New reminder</button>
+      </div>
+      <div class="stats-grid">
+        <article class="stat-card"><span>Total reminders</span><strong id="totalCount">0</strong></article>
+        <article class="stat-card"><span>Active</span><strong id="activeCount">0</strong></article>
+        <article class="stat-card"><span>Paused</span><strong id="pausedCount">0</strong></article>
+      </div>
+      <div class="list-heading"><h2>Your reminders</h2><span id="loadStatus" class="muted small"></span></div>
+      <div id="reminderList" class="reminder-list"></div>
+      <div id="emptyState" class="empty-state"><div class="empty-icon">◷</div><h3>No reminders yet</h3><p>Create your first reminder to get started.</p><button class="btn btn-outline" id="emptyCreateBtn">Create a reminder</button></div>
+    </section>
+  </main>
+
+  <dialog id="reminderDialog" class="dialog">
+    <form id="reminderForm" class="dialog-form">
+      <div class="dialog-head"><div><div class="eyebrow" id="formEyebrow">NEW REMINDER</div><h2 id="formTitle">Create reminder</h2></div><button type="button" id="closeDialogBtn" class="icon-btn" aria-label="Close">×</button></div>
+      <input type="hidden" id="reminderId">
+      <label>Reminder name<input id="reminderName" maxlength="100" required placeholder="e.g. Daily website task"></label>
+      <label>Notification message<textarea id="reminderMessage" maxlength="500" rows="3" placeholder="What do you want to be reminded about?"></textarea></label>
+      <label>Link (optional)<input id="reminderUrl" type="url" placeholder="https://example.com"></label>
+      <div class="field-block"><span class="field-label">Custom icon (optional)</span>
+        <div class="icon-upload-row"><img id="iconPreview" src="assets/default-icon.svg" alt="Reminder icon preview"><div class="upload-controls"><input id="reminderIcon" type="file" accept="image/png,image/jpeg,image/webp"><small class="muted">PNG, JPG, WebP or SVG · max 1 MB</small><button type="button" id="removeIconBtn" class="text-btn">Use default icon</button></div></div>
+      </div>
+      <fieldset><legend>Repeat on</legend><div class="weekday-grid" id="weekdayGrid">
+        <label><input type="checkbox" value="1" checked> Mon</label><label><input type="checkbox" value="2" checked> Tue</label><label><input type="checkbox" value="3" checked> Wed</label><label><input type="checkbox" value="4" checked> Thu</label><label><input type="checkbox" value="5" checked> Fri</label><label><input type="checkbox" value="6" checked> Sat</label><label><input type="checkbox" value="0"> Sun</label>
+      </div></fieldset>
+      <div class="field-block"><div class="time-heading"><span class="field-label">Notification times</span><button type="button" id="addTimeBtn" class="text-btn">＋ Add time</button></div><div id="timesList" class="times-list"></div><small class="muted">Times are saved in your selected timezone. This phase stores the schedule; it does not send notifications.</small></div>
+      <label>Timezone<select id="timezoneSelect"><option value="Asia/Kolkata">India — Asia/Kolkata</option><option value="UTC">UTC</option><option value="America/New_York">America/New_York</option><option value="Europe/London">Europe/London</option></select></label>
+      <label class="toggle-row"><input id="reminderEnabled" type="checkbox" checked><span><strong>Reminder active</strong><small class="muted">Turn off to pause this reminder.</small></span></label>
+      <div id="formError" class="form-error hidden" role="alert"></div>
+      <div class="dialog-actions"><button type="button" id="cancelBtn" class="btn btn-outline">Cancel</button><button type="submit" id="saveBtn" class="btn btn-primary">Save reminder</button></div>
+    </form>
+  </dialog>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <footer><span>Reminder Desk · Phase 1</span><span>Cloud-saved · Push delivery not enabled yet</span></footer>
+</body>
+</html>
