@@ -6,8 +6,8 @@ self.addEventListener("push", event => {
   catch (_) { if (event.data) data.body = event.data.text(); }
   event.waitUntil(self.registration.showNotification(data.title || "Reminder Desk", {
     body: data.body || "You have a reminder.",
-    icon: "assets/default-icon.svg",
-    badge: "assets/default-icon.svg",
+    icon: "assets/default-icon.png",
+    badge: "assets/default-icon.png",
     data: { url: data.url || "./" }
   }));
 });
